@@ -1,7 +1,10 @@
 import requests
 import json
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-API_KEY=''
+API_KEY=os.environ['GITHUB_KEY']
 header = {'Authorization' : 'token '+ API_KEY}
 BASE_URL='https://api.github.com'
 
@@ -24,7 +27,7 @@ def get_repositories():
 def get_teams(repo_name):
     res = requests.get(BASE_URL + '/repos/wiley/'+ repo_name +'/teams', headers= header)
     if res.status_code != 200:
-        print('WARNING: Unable to access the teams for the repo '+repo_name)
+        #print('WARNING: Unable to access the teams for the repo '+repo_name)
         return {}
 
     json_response = res.json()
@@ -71,29 +74,42 @@ def add_admin_to_repo(repo_name, user_login):
     data = {'permission': 'admin'}
     response = requests.put(BASE_URL + '/repos/wiley/'+ repo_name +'/collaborators/' + user_login, data = json.dumps(data), headers = header)
     if response.status_code != 201 and response.status_code != 204:
-        logging.warning('Unable to add '+ user_login +' as Admin in '+ repo_name)
+        print('Unable to add '+ user_login +' as Admin in '+ repo_name)
 
 def add_team_to_repo(repo_name, team_slug, permission):
     
     data = {'permission': permission}
     response = requests.put(BASE_URL + '/orgs/wiley/teams/'+ team_slug +'/repos/wiley/' + repo_name, data = json.dumps(data), headers = header)
     if response.status_code != 201 and response.status_code != 204:
-        logging.warning('Unable to add '+ user_login +' as Admin in '+ repo_name)
+        print('Unable to add '+ team_slug +' as Admin in '+ repo_name)
 
 
 if __name__ == '__main__':
+     
     
+
     print('Get the repository list')
     repositories = get_repositories()
     print(str(len(repositories)) + ' repositories found')
     repositories_with_missing_team = {}
     for repo in repositories:
-        teams = get_teams(repo['name'])
-        if not 'crossknowledge-dev' in teams:
-            print(repo['name'] + ' : The CrossKnowledge Dev team is missing')
-        if not 'crossknowledge-maintainer' in teams:
-            print(repo['name'] + ' : The CrossKnowledge Maintainer team is missing')
-   
+        repository_name = repo['name']
+        if repository_name.startswith('ck_it') or repository_name.startswith('ck-it'):
+            continue
+
+        teams = get_teams(repository_name)
+        for slug, team in teams.items():
+            if team['permission'] == 'admin':
+                print(team['name'] + ' is Admin on the repo: '+ repository_name)
+                
+        
+        """
+        print('Add pxotox as Admin on '+ repository_name)
+        add_admin_to_repo(repository_name, 'pxotox')
+
+        print('Add smartarello as Admin on '+ repository_name)
+        add_admin_to_repo(repository_name, 'smartarello')
+        """
     #collaborators = get_collaborators(repo)
     #logging.debug(collaborators)
 
